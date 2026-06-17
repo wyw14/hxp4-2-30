@@ -33,6 +33,20 @@ function writeDb(db: Database): void {
   fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 }
 
+function migrateGameState(game: GameState): GameState {
+  if (!game.nutrientConnectionHistory) {
+    const history: Record<string, number> = {};
+    for (const nutrientId of game.connectedNutrients) {
+      history[nutrientId] = game.steps;
+    }
+    return {
+      ...game,
+      nutrientConnectionHistory: history,
+    };
+  }
+  return game;
+}
+
 export function saveGame(game: GameState): void {
   const db = readDb();
   db.games[game.id] = { ...game, updatedAt: Date.now() };
@@ -41,7 +55,9 @@ export function saveGame(game: GameState): void {
 
 export function loadGame(id: string): GameState | null {
   const db = readDb();
-  return db.games[id] || null;
+  const game = db.games[id];
+  if (!game) return null;
+  return migrateGameState(game);
 }
 
 export function deleteGame(id: string): boolean {
@@ -56,5 +72,7 @@ export function deleteGame(id: string): boolean {
 
 export function listGames(): GameState[] {
   const db = readDb();
-  return Object.values(db.games).sort((a, b) => b.updatedAt - a.updatedAt);
+  return Object.values(db.games)
+    .map(migrateGameState)
+    .sort((a, b) => b.updatedAt - a.updatedAt);
 }

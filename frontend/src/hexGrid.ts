@@ -150,7 +150,7 @@ export class HexGridRenderer {
       this.svg.appendChild(defs);
     }
 
-    let filter = defs.querySelector(`#${this.glowFilterId}`);
+    let filter = defs.querySelector(`#${this.glowFilterId}`) as SVGFilterElement | null;
     if (!filter) {
       filter = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
       filter.setAttribute('id', this.glowFilterId);
@@ -174,6 +174,11 @@ export class HexGridRenderer {
       filter.appendChild(feGaussianBlur);
       filter.appendChild(feMerge);
       defs.appendChild(filter);
+    } else {
+      const feGaussianBlur = filter.querySelector('feGaussianBlur');
+      if (feGaussianBlur) {
+        feGaussianBlur.setAttribute('stdDeviation', String(this.defaultGlowStyle.blur));
+      }
     }
   }
 
@@ -393,6 +398,19 @@ export class HexGridRenderer {
 
   setGlowStyle(style: Partial<GlowStyle>): void {
     this.defaultGlowStyle = { ...this.defaultGlowStyle, ...style };
+    if (style.blur !== undefined) {
+      this.updateGlowFilterBlur();
+    }
+  }
+
+  private updateGlowFilterBlur(): void {
+    const filter = this.svg.querySelector(`#${this.glowFilterId}`);
+    if (filter) {
+      const feGaussianBlur = filter.querySelector('feGaussianBlur');
+      if (feGaussianBlur) {
+        feGaussianBlur.setAttribute('stdDeviation', String(this.defaultGlowStyle.blur));
+      }
+    }
   }
 
   getGlowStyle(): GlowStyle {

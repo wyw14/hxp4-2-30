@@ -24,6 +24,7 @@ export interface GameState {
   cells: Record<string, HexCell>;
   nutrients: string[];
   connectedNutrients: string[];
+  nutrientConnectionHistory: Record<string, number>;
   startCoord: HexCoord;
   myceliumCells: HexCoord[];
   steps: number;
@@ -45,6 +46,7 @@ export interface ExtendMyceliumRequest {
 export interface NewlyConnectedNutrient {
   nutrientId: string;
   stepsAtConnection: number;
+  incrementalSteps: number;
   coord: HexCoord;
 }
 

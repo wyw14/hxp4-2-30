@@ -74,6 +74,7 @@ export function createNewGame(level: number = 1, customRadius?: number): GameSta
     cells,
     nutrients,
     connectedNutrients: [],
+    nutrientConnectionHistory: {},
     startCoord,
     myceliumCells,
     steps: 0,
@@ -140,7 +141,7 @@ function calculateOptimalSteps(
   return result === Infinity || result === 0 ? nutrientCoords.length * 3 : result;
 }
 
-export function extendMycelium(game: GameState, coord: HexCoord): { game: GameState; success: boolean; message: string; newlyConnected?: { nutrientId: string; stepsAtConnection: number; coord: HexCoord } } {
+export function extendMycelium(game: GameState, coord: HexCoord): { game: GameState; success: boolean; message: string; newlyConnected?: { nutrientId: string; stepsAtConnection: number; incrementalSteps: number; coord: HexCoord } } {
   if (game.status !== 'playing') {
     return { game, success: false, message: '游戏已结束' };
   }
@@ -178,6 +179,7 @@ export function extendMycelium(game: GameState, coord: HexCoord): { game: GameSt
     cells: { ...game.cells },
     myceliumCells: [...game.myceliumCells, coord],
     connectedNutrients: [...game.connectedNutrients],
+    nutrientConnectionHistory: { ...game.nutrientConnectionHistory },
     steps: newSteps,
     updatedAt: Date.now(),
   };
@@ -189,9 +191,15 @@ export function extendMycelium(game: GameState, coord: HexCoord): { game: GameSt
   let newlyConnected = undefined;
   if (cell.nutrientId && !newGame.connectedNutrients.includes(cell.nutrientId)) {
     newGame.connectedNutrients.push(cell.nutrientId);
+    newGame.nutrientConnectionHistory[cell.nutrientId] = newSteps;
+
+    const previousSteps = getPreviousNutrientSteps(newGame, cell.nutrientId);
+    const incrementalSteps = newSteps - previousSteps;
+
     newlyConnected = {
       nutrientId: cell.nutrientId,
       stepsAtConnection: newSteps,
+      incrementalSteps,
       coord: coord,
     };
   }
@@ -204,6 +212,16 @@ export function extendMycelium(game: GameState, coord: HexCoord): { game: GameSt
   return { game: newGame, success: true, message: '菌丝成功蔓延', newlyConnected };
 }
 
+function getPreviousNutrientSteps(game: GameState, currentNutrientId: string): number {
+  const connectedIds = game.connectedNutrients;
+  const currentIndex = connectedIds.indexOf(currentNutrientId);
+  if (currentIndex <= 0) {
+    return 0;
+  }
+  const previousId = connectedIds[currentIndex - 1];
+  return game.nutrientConnectionHistory[previousId] || 0;
+}
+
 export function undoLastMove(game: GameState): { game: GameState; success: boolean; message: string } {
   if (game.myceliumCells.length <= 1) {
     return { game, success: false, message: '无法撤销到初始状态之前' };
@@ -213,11 +231,17 @@ export function undoLastMove(game: GameState): { game: GameState; success: boole
   const lastKey = coordKey(lastCoord);
   const lastCell = game.cells[lastKey];
 
+  const newNutrientConnectionHistory = { ...game.nutrientConnectionHistory };
+  if (lastCell?.nutrientId) {
+    delete newNutrientConnectionHistory[lastCell.nutrientId];
+  }
+
   const newGame: GameState = {
     ...game,
     cells: { ...game.cells },
     myceliumCells: game.myceliumCells.slice(0, -1),
     connectedNutrients: game.connectedNutrients.filter((n) => n !== lastCell?.nutrientId),
+    nutrientConnectionHistory: newNutrientConnectionHistory,
     steps: Math.max(0, game.steps - 1),
     status: 'playing',
     updatedAt: Date.now(),

@@ -36,6 +36,7 @@ export interface GameState {
 export interface NewlyConnectedNutrient {
   nutrientId: string;
   stepsAtConnection: number;
+  incrementalSteps: number;
   coord: HexCoord;
 }
 

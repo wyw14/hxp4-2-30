@@ -289,6 +289,7 @@ export class FungiGame {
     popup.className = 'nutrient-popup';
 
     const nutrientNumber = nutrient.nutrientId.replace('nutrient_', '');
+    const displaySteps = nutrient.incrementalSteps ?? nutrient.stepsAtConnection;
 
     popup.innerHTML = `
       <div class="nutrient-popup-content">
@@ -297,7 +298,7 @@ export class FungiGame {
         <div class="nutrient-popup-id">编号 #${parseInt(nutrientNumber) + 1}</div>
         <div class="nutrient-popup-steps">
           <span class="steps-label">本次连接花费</span>
-          <span class="steps-value">${nutrient.stepsAtConnection} 步</span>
+          <span class="steps-value">${displaySteps} 步</span>
         </div>
         <div class="nutrient-popup-hint">菌丝网络扩展中...</div>
       </div>
@@ -370,7 +371,7 @@ export class FungiGame {
       this.previewPathCoord = null;
 
       if (result.newlyConnected) {
-        this.hexGrid.triggerGlow(result.newlyConnected.coord, { color: '#ffeb3b' });
+        this.hexGrid.triggerGlow(result.newlyConnected.coord);
         this.showNutrientConnectedPopup(result.newlyConnected);
       }
 

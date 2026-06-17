@@ -29,6 +29,10 @@ export interface ExtendMyceliumResult {
   newlyConnected?: NewlyConnectedNutrient;
 }
 
+export function getNutrientDisplaySteps(nutrient: NewlyConnectedNutrient): number {
+  return nutrient.incrementalSteps ?? nutrient.stepsAtConnection;
+}
+
 export async function extendMycelium(id: string, coord: HexCoord): Promise<ExtendMyceliumResult> {
   const response = await api.post<ApiResponse<GameState>>(`/games/${id}/extend`, { coord });
   if (!response.data.success || !response.data.data) {
