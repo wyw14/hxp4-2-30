@@ -33,8 +33,22 @@ export interface GameState {
   updatedAt: number;
 }
 
+export interface NewlyConnectedNutrient {
+  nutrientId: string;
+  stepsAtConnection: number;
+  coord: HexCoord;
+}
+
+export interface GlowStyle {
+  color: string;
+  blur: number;
+  duration: number;
+  pulseCount: number;
+}
+
 export interface ApiResponse<T = void> {
   success: boolean;
   data?: T;
   error?: string;
+  newlyConnected?: NewlyConnectedNutrient;
 }

@@ -42,8 +42,22 @@ export interface ExtendMyceliumRequest {
   coord: HexCoord;
 }
 
+export interface NewlyConnectedNutrient {
+  nutrientId: string;
+  stepsAtConnection: number;
+  coord: HexCoord;
+}
+
+export interface ExtendResult {
+  game: GameState;
+  success: boolean;
+  message: string;
+  newlyConnected?: NewlyConnectedNutrient;
+}
+
 export interface ApiResponse<T = void> {
   success: boolean;
   data?: T;
   error?: string;
+  newlyConnected?: NewlyConnectedNutrient;
 }

@@ -406,6 +406,135 @@ body {
   100% { transform: scale(1); }
 }
 
+.nutrient-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10000;
+  pointer-events: auto;
+  animation: nutrientPopupIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.nutrient-popup.closing {
+  animation: nutrientPopupOut 0.3s ease forwards;
+}
+
+@keyframes nutrientPopupIn {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes nutrientPopupOut {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+}
+
+.nutrient-popup-content {
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  border: 2px solid #ffeb3b;
+  border-radius: 20px;
+  padding: 32px 40px;
+  text-align: center;
+  box-shadow: 
+    0 0 40px rgba(255, 235, 59, 0.3),
+    0 10px 40px rgba(0, 0, 0, 0.5);
+  min-width: 280px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.nutrient-popup-content::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255, 235, 59, 0.1) 0%, transparent 60%);
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.nutrient-popup-icon {
+  font-size: 56px;
+  margin-bottom: 12px;
+  animation: bounce 0.6s ease;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+.nutrient-popup-title {
+  font-size: 20px;
+  font-weight: bold;
+  color: #ffeb3b;
+  margin-bottom: 8px;
+  letter-spacing: 1px;
+}
+
+.nutrient-popup-id {
+  font-size: 28px;
+  font-weight: bold;
+  color: #7ed957;
+  margin-bottom: 20px;
+  text-shadow: 0 0 10px rgba(126, 217, 87, 0.5);
+}
+
+.nutrient-popup-steps {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 12px 20px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nutrient-popup-steps .steps-label {
+  font-size: 12px;
+  color: #8a8a9a;
+}
+
+.nutrient-popup-steps .steps-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #5fa8d3;
+}
+
+.nutrient-popup-hint {
+  font-size: 12px;
+  color: #8a8a9a;
+  font-style: italic;
+}
+
+.glow-cell {
+  pointer-events: none;
+}
+
+.glow-group {
+  pointer-events: none;
+}
+
 @media (max-width: 960px) {
   .game-container {
     flex-direction: column;

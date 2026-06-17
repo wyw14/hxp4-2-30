@@ -140,7 +140,7 @@ function calculateOptimalSteps(
   return result === Infinity || result === 0 ? nutrientCoords.length * 3 : result;
 }
 
-export function extendMycelium(game: GameState, coord: HexCoord): { game: GameState; success: boolean; message: string } {
+export function extendMycelium(game: GameState, coord: HexCoord): { game: GameState; success: boolean; message: string; newlyConnected?: { nutrientId: string; stepsAtConnection: number; coord: HexCoord } } {
   if (game.status !== 'playing') {
     return { game, success: false, message: '游戏已结束' };
   }
@@ -172,12 +172,13 @@ export function extendMycelium(game: GameState, coord: HexCoord): { game: GameSt
     return { game, success: false, message: '菌丝只能从相邻格子蔓延！' };
   }
 
+  const newSteps = game.steps + 1;
   const newGame: GameState = {
     ...game,
     cells: { ...game.cells },
     myceliumCells: [...game.myceliumCells, coord],
     connectedNutrients: [...game.connectedNutrients],
-    steps: game.steps + 1,
+    steps: newSteps,
     updatedAt: Date.now(),
   };
 
@@ -185,16 +186,22 @@ export function extendMycelium(game: GameState, coord: HexCoord): { game: GameSt
     newGame.cells[key] = { ...cell, type: HexType.MYCELIUM };
   }
 
+  let newlyConnected = undefined;
   if (cell.nutrientId && !newGame.connectedNutrients.includes(cell.nutrientId)) {
     newGame.connectedNutrients.push(cell.nutrientId);
+    newlyConnected = {
+      nutrientId: cell.nutrientId,
+      stepsAtConnection: newSteps,
+      coord: coord,
+    };
   }
 
   if (newGame.connectedNutrients.length === newGame.nutrients.length) {
     newGame.status = 'won';
-    return { game: newGame, success: true, message: '恭喜！你成功连接了所有营养源！' };
+    return { game: newGame, success: true, message: '恭喜！你成功连接了所有营养源！', newlyConnected };
   }
 
-  return { game: newGame, success: true, message: '菌丝成功蔓延' };
+  return { game: newGame, success: true, message: '菌丝成功蔓延', newlyConnected };
 }
 
 export function undoLastMove(game: GameState): { game: GameState; success: boolean; message: string } {

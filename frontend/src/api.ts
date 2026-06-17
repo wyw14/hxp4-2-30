@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { GameState, HexCoord, ApiResponse } from './types';
+import { GameState, HexCoord, ApiResponse, NewlyConnectedNutrient } from './types';
 
 const API_BASE = '/api';
 
@@ -24,12 +24,20 @@ export async function getGame(id: string): Promise<GameState> {
   return response.data.data;
 }
 
-export async function extendMycelium(id: string, coord: HexCoord): Promise<GameState> {
+export interface ExtendMyceliumResult {
+  game: GameState;
+  newlyConnected?: NewlyConnectedNutrient;
+}
+
+export async function extendMycelium(id: string, coord: HexCoord): Promise<ExtendMyceliumResult> {
   const response = await api.post<ApiResponse<GameState>>(`/games/${id}/extend`, { coord });
   if (!response.data.success || !response.data.data) {
     throw new Error(response.data.error || '延伸菌丝失败');
   }
-  return response.data.data;
+  return {
+    game: response.data.data,
+    newlyConnected: response.data.newlyConnected,
+  };
 }
 
 export async function undoMove(id: string): Promise<GameState> {

@@ -1,4 +1,4 @@
-import { GameState, HexCell, HexCoord, HexType } from './types';
+import { GameState, HexCell, HexCoord, HexType, GlowStyle } from './types';
 import {
   coordKey,
   generateHexGrid,
@@ -13,7 +13,15 @@ interface HexGridOptions {
   size?: number;
   onCellClick?: (coord: HexCoord) => void;
   onCellHover?: (coord: HexCoord | null, pixel: PixelCoord | null) => void;
+  defaultGlowStyle?: GlowStyle;
 }
+
+const DEFAULT_GLOW_STYLE: GlowStyle = {
+  color: '#ffeb3b',
+  blur: 12,
+  duration: 0.8,
+  pulseCount: 3,
+};
 
 const COLORS = {
   [HexType.EMPTY]: { fill: '#2a2a4a', stroke: '#3a3a5a' },
@@ -32,15 +40,21 @@ export class HexGridRenderer {
   private onCellHover?: (coord: HexCoord | null, pixel: PixelCoord | null) => void;
   private cellGroups = new Map<string, SVGGElement>();
   private pathPreviewGroup: SVGGElement | null = null;
+  private glowGroup: SVGGElement | null = null;
+  private glowFilterId: string;
   private reachableKeys = new Set<string>();
   private offsetX = 0;
   private offsetY = 0;
+  private defaultGlowStyle: GlowStyle;
+  private glowAnimations: Map<string, SVGAnimationElement[]> = new Map();
 
   constructor(options: HexGridOptions) {
     this.container = options.container;
     this.size = options.size ?? 36;
     this.onCellClick = options.onCellClick;
     this.onCellHover = options.onCellHover;
+    this.defaultGlowStyle = options.defaultGlowStyle ?? DEFAULT_GLOW_STYLE;
+    this.glowFilterId = `glow-filter-${Math.random().toString(36).substr(2, 9)}`;
 
     this.svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     this.svg.setAttribute('class', 'hex-svg-wrapper');
@@ -104,6 +118,13 @@ export class HexGridRenderer {
       this.svg.removeChild(this.svg.firstChild);
     }
     this.cellGroups.clear();
+    this.glowAnimations.clear();
+
+    this.ensureDefs();
+
+    this.glowGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    this.glowGroup.setAttribute('class', 'glow-group');
+    this.svg.appendChild(this.glowGroup);
 
     for (const coord of coords) {
       const key = coordKey(coord);
@@ -119,6 +140,40 @@ export class HexGridRenderer {
 
     if (this.pathPreviewGroup) {
       this.svg.appendChild(this.pathPreviewGroup);
+    }
+  }
+
+  private ensureDefs(): void {
+    let defs = this.svg.querySelector('defs');
+    if (!defs) {
+      defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+      this.svg.appendChild(defs);
+    }
+
+    let filter = defs.querySelector(`#${this.glowFilterId}`);
+    if (!filter) {
+      filter = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
+      filter.setAttribute('id', this.glowFilterId);
+      filter.setAttribute('x', '-50%');
+      filter.setAttribute('y', '-50%');
+      filter.setAttribute('width', '200%');
+      filter.setAttribute('height', '200%');
+
+      const feGaussianBlur = document.createElementNS('http://www.w3.org/2000/svg', 'feGaussianBlur');
+      feGaussianBlur.setAttribute('stdDeviation', String(this.defaultGlowStyle.blur));
+      feGaussianBlur.setAttribute('result', 'coloredBlur');
+
+      const feMerge = document.createElementNS('http://www.w3.org/2000/svg', 'feMerge');
+      const feMergeNode1 = document.createElementNS('http://www.w3.org/2000/svg', 'feMergeNode');
+      feMergeNode1.setAttribute('in', 'coloredBlur');
+      const feMergeNode2 = document.createElementNS('http://www.w3.org/2000/svg', 'feMergeNode');
+      feMergeNode2.setAttribute('in', 'SourceGraphic');
+
+      feMerge.appendChild(feMergeNode1);
+      feMerge.appendChild(feMergeNode2);
+      filter.appendChild(feGaussianBlur);
+      filter.appendChild(feMerge);
+      defs.appendChild(filter);
     }
   }
 
@@ -297,6 +352,51 @@ export class HexGridRenderer {
     }
 
     this.svg.appendChild(this.pathPreviewGroup);
+  }
+
+  triggerGlow(coord: HexCoord, style?: Partial<GlowStyle>): void {
+    const key = coordKey(coord);
+    const cellGroup = this.cellGroups.get(key);
+    if (!cellGroup || !this.glowGroup) return;
+
+    const glowStyle = { ...this.defaultGlowStyle, ...style };
+    const pixel = hexToPixel(coord, this.size);
+    const cx = pixel.x + this.offsetX;
+    const cy = pixel.y + this.offsetY;
+
+    const glowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    glowPath.setAttribute('d', hexCornersPath({ x: cx, y: cy }, this.size - 2));
+    glowPath.setAttribute('fill', glowStyle.color);
+    glowPath.setAttribute('filter', `url(#${this.glowFilterId})`);
+    glowPath.setAttribute('opacity', '0');
+    glowPath.setAttribute('class', 'glow-cell');
+
+    const anim = document.createElementNS('http://www.w3.org/2000/svg', 'animate');
+    anim.setAttribute('attributeName', 'opacity');
+    anim.setAttribute('values', '0;1;0');
+    anim.setAttribute('dur', `${glowStyle.duration}s`);
+    anim.setAttribute('repeatCount', String(glowStyle.pulseCount));
+    anim.setAttribute('fill', 'freeze');
+
+    glowPath.appendChild(anim);
+    this.glowGroup.appendChild(glowPath);
+
+    anim.beginElement();
+
+    const totalDuration = glowStyle.duration * glowStyle.pulseCount * 1000;
+    setTimeout(() => {
+      if (glowPath.parentNode) {
+        glowPath.parentNode.removeChild(glowPath);
+      }
+    }, totalDuration + 100);
+  }
+
+  setGlowStyle(style: Partial<GlowStyle>): void {
+    this.defaultGlowStyle = { ...this.defaultGlowStyle, ...style };
+  }
+
+  getGlowStyle(): GlowStyle {
+    return { ...this.defaultGlowStyle };
   }
 
   destroy(): void {

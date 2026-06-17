@@ -1,5 +1,5 @@
 import './styles.css';
-import { GameState, HexCoord, HexType } from './types';
+import { GameState, HexCoord, HexType, NewlyConnectedNutrient, GlowStyle } from './types';
 import { HexGridRenderer } from './hexGrid';
 import { createGame, getGame, extendMycelium, undoMove, resetGame, findPath } from './api';
 import { coordKey, findPathAStar, PixelCoord } from './hexUtils';
@@ -284,6 +284,54 @@ export class FungiGame {
     });
   }
 
+  private showNutrientConnectedPopup(nutrient: NewlyConnectedNutrient): void {
+    const popup = document.createElement('div');
+    popup.className = 'nutrient-popup';
+
+    const nutrientNumber = nutrient.nutrientId.replace('nutrient_', '');
+
+    popup.innerHTML = `
+      <div class="nutrient-popup-content">
+        <div class="nutrient-popup-icon">🪵</div>
+        <div class="nutrient-popup-title">营养源接入</div>
+        <div class="nutrient-popup-id">编号 #${parseInt(nutrientNumber) + 1}</div>
+        <div class="nutrient-popup-steps">
+          <span class="steps-label">本次连接花费</span>
+          <span class="steps-value">${nutrient.stepsAtConnection} 步</span>
+        </div>
+        <div class="nutrient-popup-hint">菌丝网络扩展中...</div>
+      </div>
+    `;
+
+    document.body.appendChild(popup);
+
+    popup.addEventListener('click', () => {
+      popup.classList.add('closing');
+      setTimeout(() => {
+        if (popup.parentNode) {
+          popup.parentNode.removeChild(popup);
+        }
+      }, 300);
+    });
+
+    setTimeout(() => {
+      popup.classList.add('closing');
+      setTimeout(() => {
+        if (popup.parentNode) {
+          popup.parentNode.removeChild(popup);
+        }
+      }, 300);
+    }, 3000);
+  }
+
+  setGlowStyle(style: Partial<GlowStyle>): void {
+    this.hexGrid.setGlowStyle(style);
+  }
+
+  getGlowStyle(): GlowStyle {
+    return this.hexGrid.getGlowStyle();
+  }
+
   private async startNewGame(level: number): Promise<void> {
     this.setProcessing(true);
     this.showMessage('正在生成新地图...', 'info');
@@ -315,14 +363,20 @@ export class FungiGame {
     this.setProcessing(true);
 
     try {
-      this.gameState = await extendMycelium(this.gameState.id, coord);
+      const result = await extendMycelium(this.gameState.id, coord);
+      this.gameState = result.game;
       this.hexGrid.setGameState(this.gameState);
       this.hexGrid.showPathPreview(null);
       this.previewPathCoord = null;
 
+      if (result.newlyConnected) {
+        this.hexGrid.triggerGlow(result.newlyConnected.coord, { color: '#ffeb3b' });
+        this.showNutrientConnectedPopup(result.newlyConnected);
+      }
+
       if (this.gameState.status === 'won') {
         this.showMessage('🎊 恭喜！成功连接所有营养源！', 'success');
-      } else if (cell.type === HexType.NUTRIENT && cell.nutrientId && this.gameState.connectedNutrients.includes(cell.nutrientId)) {
+      } else if (result.newlyConnected) {
         this.showMessage('✅ 成功连接一个营养源！', 'success');
       }
 
